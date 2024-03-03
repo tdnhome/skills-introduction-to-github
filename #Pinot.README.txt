@@ -1,0 +1,172 @@
+############################################################################################################
+# 
+# kind create cluster --name pinot
+# kubectl create ns pinot-quickstart
+#
+############################################################################################################
+
+VJG3F62WW7:~ trungn$ kc get nodes
+NAME             STATUS   ROLES           AGE   VERSION
+docker-desktop   Ready    control-plane   52s   v1.28.2
+
+VJG3F62WW7:~ trungn$ kind create cluster --name pinot
+Creating cluster "pinot" ...
+ ✓ Ensuring node image (kindest/node:v1.27.3) 🖼
+ ✓ Preparing nodes 📦
+ ✓ Writing configuration 📜
+ ✓ Starting control-plane 🕹️
+ ✓ Installing CNI 🔌
+ ✓ Installing StorageClass 💾
+Set kubectl context to "kind-pinot"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-pinot
+
+Have a nice day! 👋
+
+VJG3F62WW7:~ trungn$ docker container ls
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                       NAMES
+6cd946b9d5c6   kindest/node:v1.27.3      "/usr/local/bin/entr…"   14 seconds ago   Up 13 seconds   127.0.0.1:57208->6443/tcp                                   pinot-control-plane
+883477c83eab   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 57 seconds   8096-8097/tcp, 8099/tcp, 9000/tcp, 0.0.0.0:8098->8098/tcp   pinot-server
+71399be090b4   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 3 seconds    8096-8098/tcp, 9000/tcp, 0.0.0.0:8099->8099/tcp             pinot-broker
+08093b856901   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 57 seconds   8096-8099/tcp, 0.0.0.0:9002->9000/tcp                       pinot-controller
+
+VJG3F62WW7:~ trungn$ kubectl cluster-info --context kind-pinot
+Kubernetes control plane is running at https://127.0.0.1:57208
+CoreDNS is running at https://127.0.0.1:57208/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+VJG3F62WW7:~ trungn$ kind get clusters
+pinot
+
+VJG3F62WW7:~ trungn$ kc get nodes
+NAME                  STATUS   ROLES           AGE     VERSION
+pinot-control-plane   Ready    control-plane   2m36s   v1.27.3
+
+VJG3F62WW7:~ trungn$ kubectl create ns pinot-quickstart
+namespace/pinot-quickstart created
+
+VJG3F62WW7:~ trungn$ kc get ns
+NAME                 STATUS   AGE
+default              Active   2m49s
+kube-node-lease      Active   2m49s
+kube-public          Active   2m49s
+kube-system          Active   2m49s
+local-path-storage   Active   2m44s
+pinot-quickstart     Active   6s
+
+############################################################################################################
+# Running pinot in Kubernetes 
+# Try to run pinot using git.northstar: failed
+############################################################################################################
+VJG3F62WW7:~ trungn$ cd git.northstar/
+VJG3F62WW7:git.northstar trungn$ ls
+ads-k8s-infrastructure		data-persistence-service	platform-api-reviews
+
+VJG3F62WW7:git.northstar trungn$ cd ads-k8s-infrastructure/
+VJG3F62WW7:ads-k8s-infrastructure trungn$ ls
+README.md	ads		ads-chart	profiles
+
+VJG3F62WW7:ads-k8s-infrastructure trungn$ helm install ads1 ads-chart -n pinot-quickstart
+Error: INSTALLATION FAILED: template: ads/templates/server/statefulset.yaml:23:11: executing "ads/templates/server/statefulset.yaml" at <include "pinot.server.fullname" .>: error calling include: template: ads/templates/_helpers.tpl:225:44: executing "pinot.server.fullname" at <.Values.server.name>: nil pointer evaluating interface {}.name
+
+############################################################################################################
+# 
+# Running pinot in Kubernetes
+# https://docs.pinot.apache.org/basics/getting-started/kubernetes-quickstart
+#
+############################################################################################################
+
+VJG3F62WW7:trungn$ cd git.hub
+
+VJG3F62WW7:git.hub trungn$ git clone https://github.com/apache/pinot.git
+
+VJG3F62WW7:ads-k8s-infrastructure trungn$ cd /Users/trungn/git.hub/pinot/helm/pinot
+
+VJG3F62WW7:pinot trungn$ ls
+Chart.yaml			charts				pinot-realtime-quickstart.yml	requirements.lock		templates
+README.md			pinot-github-events-setup.yml	query-pinot-data.sh		requirements.yaml		values.yaml
+
+VJG3F62WW7:pinot trungn$ helm repo add pinot https://raw.githubusercontent.com/apache/pinot/master/helm
+"pinot" has been added to your repositories
+
+VJG3F62WW7:~ trungn$ kubectl create ns pinot-quickstart
+namespace/pinot-quickstart created
+
+VJG3F62WW7:pinot trungn$ kc get ns
+NAME                 STATUS   AGE
+default              Active   13m
+kube-node-lease      Active   13m
+kube-public          Active   13m
+kube-system          Active   13m
+local-path-storage   Active   13m
+pinot-quickstart     Active   11m
+
+VJG3F62WW7:pinot trungn$ helm install pinot pinot/pinot -n pinot-quickstart --set cluster.name=pinot --set server.replicaCount=2
+NAME: pinot
+LAST DEPLOYED: Sun Jan 28 10:12:26 2024
+NAMESPACE: pinot-quickstart
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+
+VJG3F62WW7:pinot trungn$ kc get ns
+NAME                 STATUS   AGE
+default              Active   15m
+kube-node-lease      Active   15m
+kube-public          Active   15m
+kube-system          Active   15m
+local-path-storage   Active   15m
+pinot-quickstart     Active   12m
+
+VJG3F62WW7:pinot trungn$ kubectl get all -n pinot-quickstart
+NAME                                          READY   STATUS              RESTARTS   AGE
+pod/pinot-broker-0                            0/1     ContainerCreating   0          96s
+pod/pinot-controller-0                        0/1     ContainerCreating   0          96s
+pod/pinot-minion-stateless-84c9d7fd55-hsfcc   0/1     ContainerCreating   0          96s
+pod/pinot-server-0                            0/1     ContainerCreating   0          96s
+pod/pinot-server-1                            0/1     Pending             0          96s
+pod/pinot-zookeeper-0                         0/1     ContainerCreating   0          96s
+
+NAME                                TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                      AGE
+service/pinot-broker                ClusterIP      10.96.81.180   <none>        8099/TCP                     96s
+service/pinot-broker-external       LoadBalancer   10.96.185.65   <pending>     8099:32763/TCP               96s
+service/pinot-broker-headless       ClusterIP      None           <none>        8099/TCP                     96s
+service/pinot-controller            ClusterIP      10.96.95.183   <none>        9000/TCP                     96s
+service/pinot-controller-external   LoadBalancer   10.96.81.37    <pending>     9000:30746/TCP               96s
+service/pinot-controller-headless   ClusterIP      None           <none>        9000/TCP                     96s
+service/pinot-server                ClusterIP      10.96.185.34   <none>        8098/TCP,80/TCP              96s
+service/pinot-server-headless       ClusterIP      None           <none>        8098/TCP,80/TCP              96s
+service/pinot-zookeeper             ClusterIP      10.96.75.72    <none>        2181/TCP,2888/TCP,3888/TCP   96s
+service/pinot-zookeeper-headless    ClusterIP      None           <none>        2181/TCP,2888/TCP,3888/TCP   96s
+
+NAME                                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/pinot-minion-stateless   0/1     1            0           96s
+
+NAME                                                DESIRED   CURRENT   READY   AGE
+replicaset.apps/pinot-minion-stateless-84c9d7fd55   1         1         0       96s
+
+NAME                                READY   AGE
+statefulset.apps/pinot-broker       0/1     96s
+statefulset.apps/pinot-controller   0/1     96s
+statefulset.apps/pinot-server       0/2     96s
+statefulset.apps/pinot-zookeeper    0/1     96s
+VJG3F62WW7:pinot trungn$ docker container ps
+
+CONTAINER ID   IMAGE                     COMMAND                  CREATED          STATUS          PORTS                                                       NAMES
+6cd946b9d5c6   kindest/node:v1.27.3      "/usr/local/bin/entr…"   16 minutes ago   Up 16 minutes   127.0.0.1:57208->6443/tcp                                   pinot-control-plane
+883477c83eab   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 39 seconds   8096-8097/tcp, 8099/tcp, 9000/tcp, 0.0.0.0:8098->8098/tcp   pinot-server
+71399be090b4   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 49 seconds   8096-8098/tcp, 9000/tcp, 0.0.0.0:8099->8099/tcp             pinot-broker
+08093b856901   apachepinot/pinot:1.0.0   "./bin/pinot-admin.s…"   5 days ago       Up 39 seconds   8096-8099/tcp, 0.0.0.0:9002->9000/tcp                       pinot-controller
+
+
+VJG3F62WW7:pinot trungn$ kubectl port-forward service/pinot-controller 9003:9000 -n pinot-quickstart
+Forwarding from 127.0.0.1:9003 -> 9000
+Forwarding from [::1]:9003 -> 9000
+
+############################################################################################################
+# 
+# pinot UI
+#
+############################################################################################################
+Open Browser: localhost:9003 
+
